@@ -31,7 +31,7 @@ type CreateProductI interface {
 
 func CreateProductHandler(log *slog.Logger, createProductI CreateProductI) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		const op = opPackage + "CreateProductHandler"
+		const op = opPackage + ".CreateProductHandler"
 
 		log := log.With(
 			slog.String("op", op),
@@ -42,9 +42,11 @@ func CreateProductHandler(log *slog.Logger, createProductI CreateProductI) http.
 		err := render.DecodeJSON(r.Body, &req)
 
 		if err != nil {
-			log.Error("failed to decode request body", sl.Err(err))
+			const errMsg = "failed to decode request body"
 
-			render.JSON(w, r, response.Error("failed to decode JSON"))
+			log.Error(errMsg, sl.Err(err))
+
+			render.JSON(w, r, response.Error(errMsg))
 
 			return
 		}
@@ -86,7 +88,7 @@ func CreateProductHandler(log *slog.Logger, createProductI CreateProductI) http.
 			return
 		}
 
-		log.Info("product created", slog.Int64("id", id))
+		log.Info("product added", slog.Int64("id", id))
 
 		render.JSON(w, r, response.OK())
 	}

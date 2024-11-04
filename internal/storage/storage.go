@@ -33,12 +33,12 @@ type CreateProductDto struct {
 func (strg *Storage) CreateProduct(product *CreateProductDto) (int64, error) {
 	const op = "internal.storage.repository.productRpository.AddNewProduct"
 
-	const query = `INSERT INTO product (product_name, translated_name)
+	const query = `INSERT INTO products (product_name, translated_name)
 	VALUES ($1, $2) RETURNING id`
 
 	var pk int64
 
-	err := strg.Db.QueryRow(query, product.Name, product.TranslatedName).Scan(pk)
+	err := strg.Db.QueryRow(query, product.Name, product.TranslatedName).Scan(&pk)
 
 	if err != nil {
 		return 0, fmt.Errorf("%s: %w", op, err)
