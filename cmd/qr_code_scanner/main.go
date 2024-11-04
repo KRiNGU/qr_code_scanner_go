@@ -6,7 +6,8 @@ import (
 	"os"
 	"os/signal"
 	"qr_code_scanner/internal/config"
-	productHandler "qr_code_scanner/internal/http-server/handlers/url"
+	productHandler "qr_code_scanner/internal/http-server/handlers/url/productHandler"
+	transactionHandler "qr_code_scanner/internal/http-server/handlers/url/transactionHandler"
 	"qr_code_scanner/internal/lib/sl"
 	"qr_code_scanner/internal/storage"
 	"syscall"
@@ -37,6 +38,7 @@ func main() {
 
 	router := chi.NewRouter()
 	router.Post("/products", productHandler.CreateProductHandler(log, storage))
+	router.Post("/transaction", transactionHandler.CreateTransactionHandler(log, storage))
 
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)

@@ -7,29 +7,25 @@ import (
 	response "qr_code_scanner/internal/lib/api"
 	"qr_code_scanner/internal/lib/sl"
 	"qr_code_scanner/internal/storage"
-	productRepository "qr_code_scanner/internal/storage/repository"
+	productRepository "qr_code_scanner/internal/storage/repository/productRepository"
 
 	"github.com/go-chi/render"
 	"github.com/go-playground/validator"
 )
 
-type Request struct {
+const opPackage = "internal.handlers.productHandler"
+
+type CreateProductRequest struct {
 	Name           string `json:"name" validate:"required"`
 	TranslatedName string `json:"translatedName" validate:"required"`
 }
 
-type Response struct {
+type CreateProductResponse struct {
 	response.Response
 	Error string `json:"error,omitempty"`
 }
 
-const opPackage = "internal.handlers.productHandler"
-
-type CreateProductI interface {
-	CreateProduct(createProductDto *storage.CreateProductDto) (int64, error)
-}
-
-func CreateProductHandler(log *slog.Logger, createProductI CreateProductI) http.HandlerFunc {
+func CreateProductHandler(log *slog.Logger, strg *storage.Storage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = opPackage + ".CreateProductHandler"
 
@@ -37,7 +33,7 @@ func CreateProductHandler(log *slog.Logger, createProductI CreateProductI) http.
 			slog.String("op", op),
 		)
 
-		var req Request
+		var req CreateProductRequest
 
 		err := render.DecodeJSON(r.Body, &req)
 
@@ -64,9 +60,9 @@ func CreateProductHandler(log *slog.Logger, createProductI CreateProductI) http.
 			return
 		}
 
-		createProductDto := storage.CreateProductDto{Name: req.Name, TranslatedName: req.TranslatedName}
+		createProductDto := productRepository.CreateProductDto{Name: req.Name, TranslatedName: req.TranslatedName}
 
-		id, err := createProductI.CreateProduct(&createProductDto)
+		id, err := productRepository.CreateProduct(&createProductDto, strg)
 
 		if errors.Is(err, productRepository.ErrProductExists) {
 			const errMsg = "product already exists"
