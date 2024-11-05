@@ -3,6 +3,7 @@ package transactionsrepository
 import (
 	"fmt"
 	"qr_code_scanner/internal/storage"
+	"time"
 )
 
 const opPackage = "internal.storage.repository.transactionsRepository"
@@ -12,6 +13,12 @@ type CreateTransactionDto struct {
 	Amount      float32
 	ReceiptId   int64
 	ProductName string
+}
+
+type TransactionDto struct {
+	CreateTransactionDto
+	Id        int64
+	CreatedAt time.Time
 }
 
 func CreateTransaction(transaction *CreateTransactionDto, strg *storage.Storage) (int64, error) {
