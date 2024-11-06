@@ -37,7 +37,6 @@ func CreateTransaction(transaction *CreateTransactionDto, strg *storage.Storage)
 		transaction.ProductName).Scan(&pk)
 
 	if err != nil {
-		fmt.Println(err)
 		return 0, fmt.Errorf("%s: %w", op, err)
 	}
 

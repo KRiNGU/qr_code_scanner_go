@@ -4,11 +4,10 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"qr_code_scanner/internal/kafka"
 	response "qr_code_scanner/internal/lib/api"
 	"qr_code_scanner/internal/lib/sl"
 	"qr_code_scanner/internal/storage"
-	transactionsrepository "qr_code_scanner/internal/storage/repository/transactionsRepository"
-	"time"
 
 	"github.com/go-chi/render"
 	"github.com/go-playground/validator/v10"
@@ -55,31 +54,32 @@ func ScanUrlHandler(log *slog.Logger, strg *storage.Storage) http.HandlerFunc {
 			return
 		}
 
-		td := transactionsrepository.TransactionDto{
-			CreateTransactionDto: transactionsrepository.CreateTransactionDto{
-				Price:       1.0,
-				Amount:      2.0,
-				ReceiptId:   1,
-				ProductName: "Product",
-			},
-			Id:        1,
-			CreatedAt: time.Now(),
-		}
-
-		//todo *todo2*
-
-		err = json.NewEncoder(w).Encode(td)
-
-		if err != nil {
-			const errMsg = "failed to encode response json"
-
-			log.Error(errMsg, sl.Err(err))
-
-			render.JSON(w, r, response.Error(errMsg))
-
-			return
-		}
+		SendUrl(log, req.Url)
 
 		render.JSON(w, r, response.OK())
+	}
+}
+
+func SendUrl(log *slog.Logger, url string) {
+	const op = opPackage + ".SendUrl"
+
+	log = log.With(
+		slog.String("op", op),
+	)
+
+	transactionInBytes, err := json.Marshal(url)
+
+	if err != nil {
+		const errMsg = "failed to parse url to bites"
+
+		log.Error(errMsg, sl.Err(err))
+	}
+
+	err = kafka.PushToKafkaProducer(log, kafka.TopicsEnum[kafka.Transactions], transactionInBytes)
+
+	if err != nil {
+		const errMsg = "failed to send url"
+
+		log.Error(errMsg, sl.Err(err))
 	}
 }
