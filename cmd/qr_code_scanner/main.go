@@ -7,11 +7,14 @@ import (
 	"os/signal"
 	"qr_code_scanner/internal/config"
 	productHandler "qr_code_scanner/internal/http-server/handlers/url/productHandler"
+	receipthandler "qr_code_scanner/internal/http-server/handlers/url/receiptHandler"
 	transactionHandler "qr_code_scanner/internal/http-server/handlers/url/transactionHandler"
 	urlhandler "qr_code_scanner/internal/http-server/handlers/url/urlHandler"
 	kafkaconsumer "qr_code_scanner/internal/kafka/kafka-consumer"
 	"qr_code_scanner/internal/lib/sl"
+	receipt_service "qr_code_scanner/internal/service/receiptService"
 	"qr_code_scanner/internal/storage"
+	receiptrepository "qr_code_scanner/internal/storage/repository/receiptRepository"
 	"syscall"
 
 	"github.com/go-chi/chi"
@@ -44,10 +47,14 @@ func main() {
 		}
 	}()
 
+	receiptService := initService(storage, log)
+
 	router := chi.NewRouter()
 	router.Post("/products", productHandler.CreateProductHandler(log, storage))
 	router.Post("/transaction", transactionHandler.CreateTransactionHandler(log, storage))
 	router.Post("/scan_url", urlhandler.ScanUrlHandler(log, storage))
+
+	receipthandler.CreateReceiptHandler(router, receiptService, log)
 
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
@@ -91,4 +98,12 @@ func setupLogger(env string) *slog.Logger {
 	}
 
 	return log
+}
+
+func initService(strg *storage.Storage, log *slog.Logger) receipt_service.ReceiptService {
+	receiptRepository := receiptrepository.GetReceiptRepository(strg)
+
+	receiptService := receipt_service.GetReceiptService(receiptRepository, log)
+
+	return receiptService
 }

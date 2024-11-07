@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	transactionhandler "qr_code_scanner/internal/http-server/handlers/url/transactionHandler"
 	"qr_code_scanner/internal/storage"
+	"strconv"
 	"syscall"
 
 	"github.com/IBM/sarama"
@@ -57,10 +58,11 @@ func CreateConsumer(log *slog.Logger, brokers []string, topic string, strg *stor
 				msgCnt++
 				log.Info(fmt.Sprintf("received message for topic(%d),count(%s),message(%s)\n", msgCnt, string(msg.Topic), string(msg.Value)))
 				err := json.Unmarshal(msg.Value, &transactions)
-				transactionhandler.CreateTransactionsBatch(log, strg, transactions)
 				if err != nil {
 					log.Info("failed to deserialize")
 				}
+				key, _ := strconv.ParseInt(string(msg.Key), 10, 64)
+				transactionhandler.CreateTransactionsBatch(log, strg, transactions, key)
 			case <-sigchan:
 				log.Info("kafka interrupt is detected")
 				doneCh <- struct{}{}

@@ -8,6 +8,7 @@ import (
 	response "qr_code_scanner/internal/lib/api"
 	"qr_code_scanner/internal/lib/sl"
 	"qr_code_scanner/internal/storage"
+	receiptrepository "qr_code_scanner/internal/storage/repository/receiptRepository"
 
 	"github.com/go-chi/render"
 	"github.com/go-playground/validator/v10"
@@ -54,13 +55,25 @@ func ScanUrlHandler(log *slog.Logger, strg *storage.Storage) http.HandlerFunc {
 			return
 		}
 
-		SendUrl(log, req.Url)
+		id, err := receiptrepository.CreateReceipt(strg)
+
+		if err != nil {
+			const errMsg = "failed to create receipt"
+
+			log.Error(errMsg, sl.Err(err))
+
+			render.JSON(w, r, response.Error(errMsg))
+
+			return
+		}
+
+		SendUrl(log, req.Url, id)
 
 		render.JSON(w, r, response.OK())
 	}
 }
 
-func SendUrl(log *slog.Logger, url string) {
+func SendUrl(log *slog.Logger, url string, id int64) {
 	const op = opPackage + ".SendUrl"
 
 	log = log.With(
@@ -75,7 +88,7 @@ func SendUrl(log *slog.Logger, url string) {
 		log.Error(errMsg, sl.Err(err))
 	}
 
-	err = kafka.PushToKafkaProducer(log, kafka.TopicsEnum[kafka.Links], transactionInBytes)
+	err = kafka.PushToKafkaProducer(log, kafka.TopicsEnum[kafka.Links], transactionInBytes, id)
 
 	if err != nil {
 		const errMsg = "failed to send url"

@@ -126,17 +126,7 @@ func CreateTransactionHandler(log *slog.Logger, strg *storage.Storage) http.Hand
 	}
 }
 
-func CreateTransactionsBatch(log *slog.Logger, strg *storage.Storage, transactions []SingleTransactionRequest) {
-	receiptId, err := receiptrepository.CreateReceipt(strg)
-
-	if err != nil {
-		const errMsg = "failed to add new receipt -> failed to add new transaction"
-
-		log.Error(errMsg)
-
-		return
-	}
-
+func CreateTransactionsBatch(log *slog.Logger, strg *storage.Storage, transactions []SingleTransactionRequest, receiptId int64) {
 	for _, transaction := range transactions {
 		_, err := createTransaction(strg, transaction, receiptId)
 

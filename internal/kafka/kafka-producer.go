@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"qr_code_scanner/internal/lib/sl"
+	"strconv"
 
 	"github.com/IBM/sarama"
 )
@@ -31,9 +32,10 @@ func ConnectProducer(brokers []string) (sarama.SyncProducer, error) {
 	return sarama.NewSyncProducer(brokers, config)
 }
 
-func PushToKafkaProducer(log *slog.Logger, topic string, message []byte) error {
+func PushToKafkaProducer(log *slog.Logger, topic string, message []byte, key int64) error {
 	const op = opPackage + ".PushToKafkaProducer"
 	brokers := []string{"localhost:9092"}
+
 	// Create connection
 
 	log = log.With(
@@ -50,6 +52,7 @@ func PushToKafkaProducer(log *slog.Logger, topic string, message []byte) error {
 	msg := &sarama.ProducerMessage{
 		Topic: topic,
 		Value: sarama.StringEncoder(message),
+		Key:   sarama.StringEncoder(strconv.Itoa(int(key))),
 	}
 
 	partition, offset, err := producer.SendMessage(msg)
