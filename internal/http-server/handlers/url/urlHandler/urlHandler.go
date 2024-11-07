@@ -75,7 +75,7 @@ func SendUrl(log *slog.Logger, url string) {
 		log.Error(errMsg, sl.Err(err))
 	}
 
-	err = kafka.PushToKafkaProducer(log, kafka.TopicsEnum[kafka.Transactions], transactionInBytes)
+	err = kafka.PushToKafkaProducer(log, kafka.TopicsEnum[kafka.Links], transactionInBytes)
 
 	if err != nil {
 		const errMsg = "failed to send url"

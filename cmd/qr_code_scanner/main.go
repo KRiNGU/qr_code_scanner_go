@@ -9,6 +9,7 @@ import (
 	productHandler "qr_code_scanner/internal/http-server/handlers/url/productHandler"
 	transactionHandler "qr_code_scanner/internal/http-server/handlers/url/transactionHandler"
 	urlhandler "qr_code_scanner/internal/http-server/handlers/url/urlHandler"
+	kafkaconsumer "qr_code_scanner/internal/kafka/kafka-consumer"
 	"qr_code_scanner/internal/lib/sl"
 	"qr_code_scanner/internal/storage"
 	"syscall"
@@ -36,6 +37,12 @@ func main() {
 		log.Error("failed to init storage", sl.Err(err))
 		os.Exit(1)
 	}
+
+	go func() {
+		if err := kafkaconsumer.CreateConsumer(log, []string{"localhost:9092"}, "transactions", storage); err != nil {
+			log.Error("failed to start kafka server")
+		}
+	}()
 
 	router := chi.NewRouter()
 	router.Post("/products", productHandler.CreateProductHandler(log, storage))

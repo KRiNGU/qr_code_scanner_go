@@ -18,8 +18,8 @@ const opPackage = "internal.http-server.handlers.url.transactionHandler"
 
 type SingleTransactionRequest struct {
 	Name           string  `json:"name" validate:"required"`
-	TranslatedName string  `json:"translatedName" validate:"required"`
-	Price          float32 `json:"price" validate:"required"`
+	TranslatedName string  `json:"translatedName"`
+	Price          float32 `json:"cost_unit" validate:"required"`
 	Amount         float32 `json:"amount" validate:"required"`
 }
 
@@ -30,6 +30,33 @@ type CreateTransactionRequest struct {
 type CreateTransactionResponse struct {
 	response.Response
 	Error string `json:"error,omitempty"`
+}
+
+func createTransaction(strg *storage.Storage, transaction SingleTransactionRequest, receiptId int64) (int64, error) {
+	if transaction.TranslatedName != "" {
+		productRepository.CreateProduct(
+			&productRepository.CreateProductDto{Name: transaction.Name, TranslatedName: transaction.TranslatedName},
+			strg,
+		)
+	} else {
+		//todo *todo2*
+		productRepository.CreateProduct(
+			&productRepository.CreateProductDto{Name: transaction.Name, TranslatedName: transaction.Name},
+			strg,
+		)
+	}
+	transactionId, err := transactionsrepository.CreateTransaction(&transactionsrepository.CreateTransactionDto{
+		Price:       transaction.Price,
+		Amount:      transaction.Amount,
+		ProductName: transaction.Name,
+		ReceiptId:   receiptId,
+	}, strg)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return transactionId, nil
 }
 
 func CreateTransactionHandler(log *slog.Logger, strg *storage.Storage) http.HandlerFunc {
@@ -80,16 +107,7 @@ func CreateTransactionHandler(log *slog.Logger, strg *storage.Storage) http.Hand
 		}
 
 		for _, transaction := range req.Transactions {
-			productRepository.CreateProduct(
-				&productRepository.CreateProductDto{Name: transaction.Name, TranslatedName: transaction.TranslatedName},
-				strg,
-			)
-			_, err := transactionsrepository.CreateTransaction(&transactionsrepository.CreateTransactionDto{
-				Price:       transaction.Price,
-				Amount:      transaction.Amount,
-				ProductName: transaction.Name,
-				ReceiptId:   receiptId,
-			}, strg)
+			_, err := createTransaction(strg, transaction, receiptId)
 
 			if err != nil {
 				const errMsg = "failed to add new transaction"
@@ -105,5 +123,29 @@ func CreateTransactionHandler(log *slog.Logger, strg *storage.Storage) http.Hand
 		log.Info("receipt added", slog.Int64("id", receiptId))
 
 		render.JSON(w, r, response.OK())
+	}
+}
+
+func CreateTransactionsBatch(log *slog.Logger, strg *storage.Storage, transactions []SingleTransactionRequest) {
+	receiptId, err := receiptrepository.CreateReceipt(strg)
+
+	if err != nil {
+		const errMsg = "failed to add new receipt -> failed to add new transaction"
+
+		log.Error(errMsg)
+
+		return
+	}
+
+	for _, transaction := range transactions {
+		_, err := createTransaction(strg, transaction, receiptId)
+
+		if err != nil {
+			const errMsg = "failed to add new transaction"
+
+			log.Error(errMsg, slog.String("product", transaction.Name), slog.Int64("receipt", receiptId))
+
+			return
+		}
 	}
 }
